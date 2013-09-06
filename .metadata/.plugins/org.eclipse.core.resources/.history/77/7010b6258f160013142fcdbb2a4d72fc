@@ -1,0 +1,151 @@
+package com.stopwatch;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.util.Log;
+import android.view.Menu;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+
+public class MainActivity extends Activity {
+
+	private static String TAG = MainActivity.class.getName();
+	private static long SLEEP_TIME = 1; // Sleep for some time
+	private TextView timeText;
+	
+	private boolean running = false;
+	private boolean stopped = true;
+	private boolean paused = false;
+    
+	private long startTime;
+    private long curTime;
+    
+    private Button startButton;
+	private Button stopButton;
+	private Button pauseButton;
+
+	@Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        
+        startButton = (Button) findViewById(R.id.start);
+    	stopButton = (Button) findViewById(R.id.stop);
+    	pauseButton = (Button) findViewById(R.id.pause);
+        
+    	startButton.setOnClickListener(new View.OnClickListener() {
+    	    @Override
+    	    public void onClick(View v) {
+    	    	startTimer();
+    	    }
+    	});
+    	
+    	stopButton.setOnClickListener(new View.OnClickListener() {
+    	    @Override
+    	    public void onClick(View v) {
+    	    	stopTimer();
+    	    }
+    	});
+    	
+    	pauseButton.setOnClickListener(new View.OnClickListener() {
+    	    @Override
+    	    public void onClick(View v) {
+    	    	pauseTimer();
+    	    }
+    	});
+        
+        timeText = (TextView) findViewById(R.id.timeView);
+ 
+        // TODO: Get start time here
+
+        // Start timer and launch main activity
+        ClockUpdater clockUpdater = new ClockUpdater();
+        //set the start time
+        startTime = System.currentTimeMillis();
+        clockUpdater.start();
+    }
+	
+	
+	
+	private class ClockUpdater extends Thread {
+        @Override
+        /**
+         * Sleep for some time and than start new activity.
+         */
+        public void run() {
+            try {
+                // Sleeping
+                while (true) {
+                	//sleep for SLEEP_TIME (set to 1 milisecond)
+                    Thread.sleep(SLEEP_TIME);
+                    
+                    if(running){
+                    	//get the time since the start of the stop watch
+                        curTime = System.currentTimeMillis() - startTime;
+                        updateTimeText();
+                    }
+                    else if(stopped && !paused){
+                    	//reset the start time if the clock is stopped
+                    	startTime = System.currentTimeMillis();
+                    }
+                    //else the timer is paused and keeps the old value
+                }
+
+            } catch (Exception e) {
+                Log.e(TAG, e.getMessage());
+            }
+
+        }
+        
+        private void updateTimeText(){
+        	int mili = (int) curTime;
+            int seconds = (int) curTime / 1000;
+            int minutes = seconds / 60;
+            int hours = minutes / 60;
+            mili = mili % 10;
+            seconds = seconds % 60;
+
+            // Set new values
+            
+            Message msg = new Message();
+            msg.obj = String.format("%d:%02d:%02d.%d", hours, minutes, seconds, mili);
+            timeViewHandler.sendMessage(msg);
+        }
+    }
+
+	public void startTimer(){
+    	running = true;
+    	stopped = false;
+    	paused = false;
+    }
+    
+    public void stopTimer(){
+    	running = false;
+    	stopped = true;
+    	paused = false;
+    }
+    
+    public void pauseTimer(){
+    	running = false;
+    	stopped = false;
+    	paused = true;
+    }
+	
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+    
+    Handler timeViewHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            String time = (String) msg.obj;
+            timeText.setText(time);
+        }
+    };
+}
